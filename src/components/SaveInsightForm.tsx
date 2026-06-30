@@ -2,8 +2,17 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 
+const CONFIDENCE_OPTIONS = [
+  { value: 'exact', label: 'Exact' },
+  { value: 'high', label: 'High' },
+  { value: 'medium', label: 'Medium' },
+  { value: 'low', label: 'Low' },
+  { value: 'none', label: 'None' },
+]
+
 export function SaveInsightForm({ conceptId }: { conceptId: string }) {
   const [text, setText] = useState('')
+  const [confidence, setConfidence] = useState('medium')
   const [saving, setSaving] = useState(false)
   const router = useRouter()
 
@@ -11,6 +20,7 @@ export function SaveInsightForm({ conceptId }: { conceptId: string }) {
     e.preventDefault()
     if (!text.trim()) return
     setSaving(true)
+
     await fetch('/api/insights', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -18,10 +28,12 @@ export function SaveInsightForm({ conceptId }: { conceptId: string }) {
         body: text,
         anchorType: 'concept',
         conceptId,
-        confidence: 'medium',
+        confidence,
       }),
     })
+
     setText('')
+    setConfidence('medium')
     setSaving(false)
     router.push('/insights')
   }
@@ -40,6 +52,30 @@ export function SaveInsightForm({ conceptId }: { conceptId: string }) {
           color: 'hsl(var(--foreground))',
         }}
       />
+      <div className="flex gap-2 items-center">
+        <label
+          className="text-xs"
+          style={{ color: 'hsl(var(--muted-foreground))' }}
+        >
+          Confidence:
+        </label>
+        <select
+          value={confidence}
+          onChange={(e) => setConfidence(e.target.value)}
+          className="text-xs px-2 py-1 rounded border outline-none flex-1"
+          style={{
+            background: 'hsl(var(--background))',
+            borderColor: 'hsl(var(--border))',
+            color: 'hsl(var(--foreground))',
+          }}
+        >
+          {CONFIDENCE_OPTIONS.map((opt) => (
+            <option key={opt.value} value={opt.value}>
+              {opt.label}
+            </option>
+          ))}
+        </select>
+      </div>
       <button
         type="submit"
         disabled={saving || !text.trim()}
