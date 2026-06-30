@@ -2,7 +2,6 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import dynamic from 'next/dynamic'
-import { initCytoscape } from '@/lib/cytoscape-init'
 import type { CytoscapeComponentProps } from 'react-cytoscapejs'
 
 // Dynamic import to avoid SSR issues with Cytoscape
@@ -48,7 +47,6 @@ export function GraphView({ concepts, relations }: Props) {
   const [cytoscapeReady, setCytoscapeReady] = useState(false)
 
   useEffect(() => {
-    initCytoscape()
     setCytoscapeReady(true)
   }, [])
 
@@ -142,7 +140,7 @@ export function GraphView({ concepts, relations }: Props) {
           <CytoscapeComponent
             elements={elements}
             stylesheet={stylesheet as any}
-            layout={{ name: 'cose-bilkent', animate: true, randomize: false, nodeRepulsion: 4500 } as any}
+            layout={{ name: 'cose', animate: true, randomize: false, nodeRepulsion: 4500 } as any}
             style={{ width: '100%', height: '100%', minHeight: '500px' }}
             cy={(cy: any) => {
               cy.on('tap', 'node', (evt: any) => {
