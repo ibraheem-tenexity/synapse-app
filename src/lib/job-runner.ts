@@ -1,9 +1,10 @@
 import { db } from '@/db'
-import { concepts, relations, sources } from '@/db/schema'
-import { and, eq } from 'drizzle-orm'
+import { relations, sources } from '@/db/schema'
+import { eq } from 'drizzle-orm'
 import { sql } from 'drizzle-orm'
 import { extractConcepts } from './extractor'
 import { getEmbedding } from './embeddings'
+import { findOrMergeConcept } from './concept-merger'
 
 let runnerStarted = false
 
@@ -94,58 +95,22 @@ async function runExtractSourceJob(job: Record<string, unknown>) {
 
   await updateJobStage(jobId, 'link', 'Linking concepts across sources...')
 
-  // Insert concepts
+  // Insert / merge concepts using enhanced norm-label + alias + cosine-similarity dedup
   const conceptIds: Record<string, string> = {}
   for (const concept of result.concepts) {
     const normLabel = concept.label.toLowerCase().trim()
-    const embeddingVec = await getEmbedding(
-      concept.label + ' ' + (concept.short_definition || '')
-    )
-    // Store embedding as JSON-serialized text (schema: text("embedding"))
-    const embeddingJson = JSON.stringify(embeddingVec)
+    const embedding = await getEmbedding(concept.label + ' ' + (concept.short_definition || ''))
 
-    // Check if concept already exists
-    const [existing] = await db
-      .select()
-      .from(concepts)
-      .where(and(eq(concepts.ownerUserId, ownerUserId), eq(concepts.normLabel, normLabel)))
-      .limit(1)
+    const { conceptId } = await findOrMergeConcept(ownerUserId, {
+      label: concept.label,
+      normLabel,
+      shortDefinition: concept.short_definition || null,
+      embedding,
+      mentions: concept.mentions.map((m: any) => ({ ...m, source_id: sourceId })),
+      sourceId,
+    })
 
-    if (existing) {
-      // Merge: append source
-      const newSourceIds = [...new Set([...(existing.sourceIds || []), sourceId])]
-      const existingMentions = (existing.mentions as Array<Record<string, unknown>>) || []
-      const newMentions = [
-        ...existingMentions,
-        ...concept.mentions.map((m) => ({ ...m, source_id: sourceId })),
-      ]
-      await db
-        .update(concepts)
-        .set({
-          sourceIds: newSourceIds,
-          mentions: newMentions,
-          isCrossSource: newSourceIds.length > 1,
-          updatedAt: new Date(),
-        })
-        .where(eq(concepts.id, existing.id))
-      conceptIds[concept.label] = existing.id
-    } else {
-      const [newConcept] = await db
-        .insert(concepts)
-        .values({
-          ownerUserId,
-          label: concept.label,
-          normLabel,
-          shortDefinition: concept.short_definition || null,
-          mentions: concept.mentions.map((m) => ({ ...m, source_id: sourceId })),
-          sourceIds: [sourceId],
-          isCrossSource: false,
-          embedding: embeddingJson,
-          referencesStatus: 'none',
-        })
-        .returning()
-      conceptIds[concept.label] = newConcept.id
-    }
+    conceptIds[concept.label] = conceptId
   }
 
   // Insert relations
