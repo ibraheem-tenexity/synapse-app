@@ -80,6 +80,9 @@ export async function getGraph(userId: string) {
 
   const conceptsWithDegree = conceptRows.map((c) => ({
     ...c,
+    // isCrossSource is included from the wildcard select; surface it explicitly
+    // so graph UI can style cross-source nodes differently (T05)
+    isCrossSource: c.isCrossSource,
     degree: degreeMap.get(c.id) ?? 0,
   }))
 
