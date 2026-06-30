@@ -45,9 +45,11 @@ const RELATION_COLORS: Record<string, string> = {
 export function GraphView({ concepts, relations }: Props) {
   const router = useRouter()
   const [selectedConcept, setSelectedConcept] = useState<Concept | null>(null)
+  const [cytoscapeReady, setCytoscapeReady] = useState(false)
 
   useEffect(() => {
     initCytoscape()
+    setCytoscapeReady(true)
   }, [])
 
   // Build Cytoscape elements
@@ -136,17 +138,19 @@ export function GraphView({ concepts, relations }: Props) {
       {/* Graph canvas */}
       <div className="flex-1 relative rounded-xl overflow-hidden border"
            style={{background: 'hsl(var(--sunken))', borderColor: 'hsl(var(--border))'}}>
-        <CytoscapeComponent
-          elements={elements}
-          stylesheet={stylesheet as any}
-          layout={{ name: 'cose-bilkent', animate: true, randomize: false, nodeRepulsion: 4500 } as any}
-          style={{ width: '100%', height: '100%', minHeight: '500px' }}
-          cy={(cy: any) => {
-            cy.on('tap', 'node', (evt: any) => {
-              handleNodeClick(evt.target.id())
-            })
-          }}
-        />
+        {cytoscapeReady && (
+          <CytoscapeComponent
+            elements={elements}
+            stylesheet={stylesheet as any}
+            layout={{ name: 'cose-bilkent', animate: true, randomize: false, nodeRepulsion: 4500 } as any}
+            style={{ width: '100%', height: '100%', minHeight: '500px' }}
+            cy={(cy: any) => {
+              cy.on('tap', 'node', (evt: any) => {
+                handleNodeClick(evt.target.id())
+              })
+            }}
+          />
+        )}
 
         {/* Legend */}
         <div className="absolute bottom-4 left-4 rounded-lg p-3 text-xs space-y-1"
