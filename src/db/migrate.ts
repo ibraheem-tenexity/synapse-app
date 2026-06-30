@@ -2,6 +2,7 @@ import { drizzle } from "drizzle-orm/postgres-js";
 import { migrate } from "drizzle-orm/postgres-js/migrator";
 import postgres from "postgres";
 import path from "path";
+import { eq } from "drizzle-orm";
 import { users } from "./schema";
 
 async function runMigrations() {
@@ -24,15 +25,16 @@ async function runMigrations() {
     });
     console.log("[migrate] Migrations applied successfully");
 
-    // Seed demo user if not already present
+    // Ensure demo user has the fixed known UUID for session compatibility
+    await db.delete(users).where(eq(users.email, "demo@synapse.app"));
     await db
       .insert(users)
       .values({
+        id: "00000000-0000-0000-0000-000000000001",
         email: "demo@synapse.app",
         displayName: "Demo User",
-        passwordHash: null, // any password accepted
-      })
-      .onConflictDoNothing();
+        passwordHash: null,
+      });
 
     console.log("[migrate] Demo user seeded (or already present)");
   } catch (err) {

@@ -4,7 +4,7 @@ import { getNextAuthSecret } from "./lib/nextauth-secret";
 
 // Demo user — any password accepted (BR: demo/mock auth)
 const DEMO_USER = {
-  id: "demo-user-id",
+  id: "00000000-0000-0000-0000-000000000001",
   email: "demo@synapse.app",
   name: "Demo User",
 };
