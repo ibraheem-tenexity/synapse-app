@@ -1,11 +1,11 @@
 // Register cytoscape-cose-bilkent layout
 // This must only run on the client side
+let _cytoscapeInitialized = false
 export function initCytoscape() {
   if (typeof window === 'undefined') return
-  // Dynamic require to avoid SSR issues
+  if (_cytoscapeInitialized) return
+  _cytoscapeInitialized = true
   const cytoscape = require('cytoscape')
   const coseBilkent = require('cytoscape-cose-bilkent')
-  if (!cytoscape('layout', 'cose-bilkent')) {
-    cytoscape.use(coseBilkent)
-  }
+  cytoscape.use(coseBilkent)
 }
