@@ -94,6 +94,8 @@ export async function getGraph(userId: string) {
 // ---------------------------------------------------------------------------
 
 export async function getConcept(userId: string, conceptId: string) {
+  const { or } = await import('drizzle-orm')
+
   const rows = await db
     .select()
     .from(concepts)
@@ -104,54 +106,63 @@ export async function getConcept(userId: string, conceptId: string) {
 
   const concept = rows[0]
 
-  // Get neighbors via relations
-  const neighborRelations = await db
+  // Get all relations involving this concept
+  const conceptRelations = await db
     .select()
     .from(relations)
     .where(
       and(
         eq(relations.ownerUserId, userId),
-        sql`(${relations.fromConceptId} = ${conceptId} OR ${relations.toConceptId} = ${conceptId})`
+        or(eq(relations.fromConceptId, conceptId), eq(relations.toConceptId, conceptId))
       )
     )
 
   // Collect neighbor concept IDs
-  const neighborIds = new Set<string>()
-  for (const r of neighborRelations) {
-    if (r.fromConceptId !== conceptId) neighborIds.add(r.fromConceptId)
-    if (r.toConceptId !== conceptId) neighborIds.add(r.toConceptId)
-  }
+  const neighborIds = [
+    ...new Set(
+      conceptRelations
+        .flatMap((r) => [r.fromConceptId, r.toConceptId])
+        .filter((id) => id !== conceptId)
+    ),
+  ]
 
-  const neighborConcepts =
-    neighborIds.size > 0
+  // Fetch neighbor concepts (subset of all user concepts)
+  const allNeighborCandidates =
+    neighborIds.length > 0
       ? await db
-          .select()
+          .select({
+            id: concepts.id,
+            label: concepts.label,
+            shortDefinition: concepts.shortDefinition,
+            isCrossSource: concepts.isCrossSource,
+          })
           .from(concepts)
-          .where(
-            and(
-              eq(concepts.ownerUserId, userId),
-              sql`${concepts.id} = ANY(ARRAY[${sql.join(
-                Array.from(neighborIds).map((id) => sql`${id}::uuid`),
-                sql`, `
-              )}])`
-            )
-          )
+          .where(eq(concepts.ownerUserId, userId))
       : []
 
-  // Get refs count
-  const refCountRows = await db
-    .select({ count: count() })
+  const filteredNeighbors = allNeighborCandidates.filter((n) =>
+    neighborIds.includes(n.id)
+  )
+
+  // Get references for this concept
+  const conceptRefs = await db
+    .select()
     .from(refs)
     .where(eq(refs.conceptId, conceptId))
 
-  const refsCount = refCountRows[0]?.count ?? 0
+  // Build neighbor list with relation types
+  const neighborList = filteredNeighbors.map((n) => {
+    const rel = conceptRelations.find(
+      (r) => r.fromConceptId === n.id || r.toConceptId === n.id
+    )
+    return { ...n, relationType: rel?.type || 'related-to' }
+  })
 
   return {
     ...concept,
-    degree: neighborIds.size,
-    neighbors: neighborConcepts,
-    relations: neighborRelations,
-    refsCount,
+    neighbors: neighborList,
+    refs: conceptRefs,
+    mentions: (concept.mentions as any[]) || [],
   }
 }
 
