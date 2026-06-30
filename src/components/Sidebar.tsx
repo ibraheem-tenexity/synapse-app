@@ -1,6 +1,7 @@
 'use client'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { signOut } from 'next-auth/react'
 
 const nav = [
   { href: '/library', label: 'Library', testId: 'nav-library', icon: '📚' },
@@ -39,6 +40,14 @@ export default function Sidebar() {
           <span>{item.label}</span>
         </Link>
       ))}
+      <button
+        onClick={() => signOut({ callbackUrl: '/login' })}
+        className="mt-auto text-xs px-3 py-2 text-left w-full hover:opacity-70"
+        style={{ color: 'hsl(var(--muted-foreground))' }}
+        data-testid="nav-signout"
+      >
+        Sign out
+      </button>
     </aside>
   )
 }
