@@ -1,11 +1,9 @@
-import type { NextConfig } from "next";
-
-const nextConfig: NextConfig = {
+/** @type {import('next').NextConfig} */
+const nextConfig = {
   experimental: {
     serverComponentsExternalPackages: ["pdf-parse", "jsdom"],
   },
   webpack: (config) => {
-    // Needed for pdf-parse and canvas deps
     config.externals = [...(config.externals || []), { canvas: "canvas" }];
     return config;
   },
