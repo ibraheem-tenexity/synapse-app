@@ -20,5 +20,7 @@ COPY --from=builder /app/.next ./.next
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/package.json ./package.json
+# Migrations SQL files needed at runtime by drizzle-orm/migrator (called via boot sequence)
+COPY --from=builder /app/drizzle ./drizzle
 EXPOSE 3000
-CMD ["sh", "-c", "node -e \"require('./src/db/migrate')\" && npx next start -p ${PORT:-3000} -H 0.0.0.0"]
+CMD ["sh", "-c", "npx next start -p ${PORT:-3000} -H 0.0.0.0"]
