@@ -7,6 +7,7 @@ import { eq, inArray } from 'drizzle-orm'
 import Link from 'next/link'
 import { SaveInsightForm } from '@/components/SaveInsightForm'
 import { DeepResearchButton } from '@/components/DeepResearchButton'
+import { ReferencesPoller } from '@/components/ReferencesPoller'
 
 export default async function ConceptDetailPage({ params }: { params: { id: string } }) {
   const session = await auth()
@@ -29,6 +30,7 @@ export default async function ConceptDetailPage({ params }: { params: { id: stri
 
   return (
     <div>
+      <ReferencesPoller status={concept.referencesStatus} />
       {/* Back link */}
       <Link href="/graph" className="text-sm mb-4 block" style={{ color: 'hsl(var(--brand))' }}>
         ← Graph

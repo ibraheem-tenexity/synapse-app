@@ -1,10 +1,11 @@
 import { db } from '@/db'
-import { relations, sources } from '@/db/schema'
+import { relations, sources, concepts } from '@/db/schema'
 import { eq } from 'drizzle-orm'
 import { sql } from 'drizzle-orm'
 import { extractConcepts } from './extractor'
 import { getEmbedding } from './embeddings'
 import { findOrMergeConcept } from './concept-merger'
+import { researchReferences } from './references'
 
 let runnerStarted = false
 
@@ -152,17 +153,24 @@ async function runExtractSourceJob(job: Record<string, unknown>) {
 }
 
 async function runResearchReferencesJob(job: Record<string, unknown>) {
-  // Placeholder — actual implementation in T10
-  await db.execute(sql`
-    UPDATE jobs
-    SET status = 'done', stage = 'done', updated_at = NOW()
-    WHERE id = ${job.id as string}
-  `)
-  if (job.concept_id) {
-    await db.execute(sql`
-      UPDATE concepts
-      SET references_status = 'ready', updated_at = NOW()
-      WHERE id = ${job.concept_id as string}
-    `)
-  }
+  const conceptId = (job.concept_id || job.conceptId) as string | undefined
+  if (!conceptId) return
+
+  const [concept] = await db
+    .select({
+      id: concepts.id,
+      label: concepts.label,
+      shortDefinition: concepts.shortDefinition,
+    })
+    .from(concepts)
+    .where(eq(concepts.id, conceptId))
+    .limit(1)
+
+  if (!concept) return
+
+  await researchReferences(concept.id, concept.label, concept.shortDefinition || null)
+
+  await db.execute(
+    sql`UPDATE jobs SET status = 'done', stage = 'done', updated_at = NOW() WHERE id = ${job.id as string}`
+  )
 }
