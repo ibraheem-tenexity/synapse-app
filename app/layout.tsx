@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { boot } from "@/lib/boot";
+boot(); // start job runner on server
 
 export const metadata: Metadata = {
   title: "Synapse — Concept Knowledge Graph",
